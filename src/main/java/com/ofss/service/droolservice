@@ -1,0 +1,111 @@
+package com.ofss.service;
+
+import com.ofss.model.Rules;
+import com.ofss.repository.RulesRepository;
+
+
+import org.kie.api.KieServices;
+import org.kie.api.builder.KieBuilder;
+import org.kie.api.builder.KieFileSystem;
+import org.kie.api.builder.KieRepository;
+import org.kie.api.builder.Message;
+import org.kie.api.runtime.KieContainer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+@Service
+public class droolservice {
+
+    public static KieContainer kieContainer;
+
+    @Autowired
+    private RulesRepository ruleRepository;
+    public KieContainer getKieContainer() {
+        return kieContainer;
+      }
+
+    public  void reload(){
+        KieContainer kieContainer=loadContainerFromString(loadRules());
+        this.kieContainer=kieContainer;
+    }
+
+    private List<Rules> loadRules(){
+        List<Rules> rules=ruleRepository.findAll();
+//        System.out.println(rules.toString());
+        return rules;
+    }
+    
+    public List<Rules> getAllRules()
+	{
+		System.out.println("REturning all rules using RuleRepository");
+		List<Rules> allRules=new ArrayList<>();
+		
+		ruleRepository.findAll()
+		.forEach(rule -> allRules.add(rule));
+		
+		return allRules;
+	}
+    
+    public String addrule(Rules rule)
+	{
+		System.out.println("Adding rule using ruleRepository");
+		ruleRepository.save(rule);
+		return "The rule object has been successfully added to DB";
+	}
+    
+    public String updateCustomer(Long id, Rules ruleNew) {
+		// TODO Auto-generated method stub
+		System.out.println("Updating rule object using ruleRepository ");
+		Rules ruleExisting=ruleRepository.findById(id).orElse(null);
+		if (ruleExisting!=null) {
+			
+			if (ruleNew.getContent()!=null)
+				ruleExisting.setContent(ruleNew.getContent());
+			
+			ruleRepository.save(ruleExisting);
+			return "Customer has been successfully updated";
+		}
+			else
+				return "No such customer exists";
+			
+	}
+    public String deleterule(Long id) {
+		ruleRepository.deleteById(id);
+		return "Deleted succesfully";
+	}
+
+    private  KieContainer loadContainerFromString(List<Rules> rules) {
+        long startTime = System.currentTimeMillis();
+        KieServices ks = KieServices.Factory.get();
+        KieRepository kr = ks.getRepository();
+        KieFileSystem kfs = ks.newKieFileSystem();
+        System.out.println("hii");
+        for (Rules rule:rules) {
+            String  drl=rule.getContent();
+            System.out.println("akhila");
+            System.out.printf("src/main/resources/rules" + drl.hashCode() + ".drl", drl);
+            kfs.write("src/main/resources/" + drl.hashCode() + ".drl", drl);
+            System.out.println(drl);
+        }
+
+        KieBuilder kb = ks.newKieBuilder(kfs);
+
+        kb.buildAll();
+        if (kb.getResults().hasMessages(Message.Level.ERROR)) {
+            throw new RuntimeException("Build Errors:\n" + kb.getResults().toString());
+        }
+        long endTime = System.currentTimeMillis();
+        System.out.println("Time to build rules : " + (endTime - startTime)  + " ms" );
+        startTime = System.currentTimeMillis();
+        KieContainer kContainer = ks.newKieContainer(kr.getDefaultReleaseId());
+        endTime = System.currentTimeMillis();
+        System.out.println("Time to load container: " + (endTime - startTime)  + " ms" );
+        System.out.println(kContainer);
+        return kContainer;
+        
+    }
+}

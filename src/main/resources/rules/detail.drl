@@ -1,0 +1,17 @@
+package KieRule;
+import com.ofss.model.pojo;
+
+rule "Allow"
+
+when
+p1Object : com.ofss.model.pojo(device==1234);
+then
+p1Object.setMsg("proceed to login");
+end;
+
+rule "block"
+when 
+p1Object : com.ofss.model.pojo(device==5678); 
+then 
+p1Object.setMsg("block user");
+end;
